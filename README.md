@@ -27,6 +27,37 @@ Bu proje, konveyör bantlarında hareket eden kutuların düşme durumlarını t
 - **Scikit-learn**
 - **Pandas & NumPy**
 
+## 🎬 Veri Seti Oluşturma Süreci
+Bu proje için tamamen özgün bir veri seti oluşturulmuştur:
+
+1. Three.js Simülasyon 🎮
+
+- Three.js kulanılarak 3D konveyör bandı simülasyonu oluşturuldu
+- Farklı kutu boyutları, hızlar ve düşme senaryoları simüle edildi
+- Çeşitli kamera açıları ve lighting koşulları uygulandı
+- Programatik animasyon ile kutu düşme durumları oluşturuldu
+
+2. Görüntü Yakalama 📸
+
+- Simülasyondan binlerce frame yakalandı
+- Normal konveyör hareketi ve kutu düşme durumları kaydedildi
+- Farklı çevre koşulları ve kutu tipleri için örnekler toplandı
+- Çeşitlilik için farklı senaryolar oluşturuldu
+
+3. Otomatik Etiketleme 🏷️
+
+- Simülasyon sırasında kutu pozisyonları otomatik kaydedildi
+- Bounding box'lar kod ile otomatik hesaplandı ve çizildi
+- CSV formatında koordinat bilgileri otomatik oluşturuldu
+- fall ve no_fall sınıfları simülasyon durumuna göre otomatik atandı
+
+4. YOLO Format Dönüşümü 🔄
+
+- YOLOv8 eğitimi için CSV koordinatları YOLO TXT formatına çevrildi
+- YOLO formatı normalize edilmiş koordinatlar (0-1 arası) gerektirdiği için dönüşüm yapıldı
+- Train/Val/Test setlerine bölündü
+- data.yaml konfigürasyon dosyası oluşturuldu
+
 ### Örnek Kutu Düşme Tespiti
 | Normal Hareket | Kutu Düşme Tespiti |
 |----------------|-------------------|
