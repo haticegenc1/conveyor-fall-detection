@@ -1,0 +1,13 @@
+{
+  "model": "YOLOv8n",
+  "task": "Konvey\u00f6r Band\u0131 D\u00fc\u015fme Tespiti",
+  "timestamp": "2025-07-28T01:55:31.074175",
+  "metrics": {
+    "mAP50": 0.9498154180942018,
+    "mAP50-95": 0.8543275384990052,
+    "Precision": 0.848707198489251,
+    "Recall": 0.9709185086098091,
+    "F1-Score": 0.9057088215326395
+  },
+  "device": "mps"
+}

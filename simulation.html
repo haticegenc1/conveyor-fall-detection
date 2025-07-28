@@ -1,0 +1,936 @@
+<div class="control-group">
+                <label>Konveyör Titreşimi:</label>
+                <input type="range" id="vibration" min="0" max="5" step="0.1" value="1.0">
+                <span id="vibrationValue">1.0</span>
+            </div>            <div class="control-group">
+                <label>Kamera Açısı:</label>
+                <select id="cameraAngle">
+                    <option value="side" selected>Yan Görünüm</option>
+                    <option value="top">Üstten Görünüm</option>
+                    <option value="diagonal">Çapraz Görünüm</option>
+                    <option value="front">Ön Görünüm</option>
+                </select>
+            </div><!DOCTYPE html>
+<html lang="tr">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konveyör Bant Simülatörü</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            min-width: 300px;
+        }
+        .control-group {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #333;
+            color: white;
+        }
+        button {
+            background: #4CAF50;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 200px;
+        }
+        .status {
+            margin: 5px 0;
+        }
+        .download-btn {
+            background: #2196F3;
+        }
+        .download-btn:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="controls">
+            <h3>Simülasyon Kontrolleri</h3>
+            
+            <div class="control-group">
+                <label>Konveyör Hızı:</label>
+                <input type="range" id="beltSpeed" min="0.2" max="3" step="0.1" value="1.5">
+                <span id="speedValue">1.5</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Kutu Boyutu:</label>
+                <select id="boxSize">
+                    <option value="small">Küçük</option>
+                    <option value="medium" selected>Orta</option>
+                    <option value="large">Büyük</option>
+                    <option value="random">Rastgele</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Düşme Olasılığı (%):</label>
+                <input type="range" id="fallProbability" min="20" max="90" value="45">
+                <span id="fallValue">45</span>%
+            </div>
+            
+            <div class="control-group">
+                <label>Kutu Ekleme Sıklığı (saniye):</label>
+                <input type="range" id="spawnRate" min="0.2" max="3" step="0.1" value="1.5">
+                <span id="spawnValue">1.5</span>
+            </div>
+            
+            <div class="control-group">
+                <button id="startBtn">Simülasyonu Başlat</button>
+                <button id="stopBtn">Simülasyonu Durdur</button>
+                <button id="resetBtn">Sıfırla</button>
+            </div>
+            
+            <div class="control-group">
+                <button id="captureBtn" class="download-btn">Görüntü Yakala</button>
+                <button id="downloadBtn" class="download-btn">Veri Setini İndir</button>
+                <button onclick="simulator.downloadAsZip()">Verileri ZIP Olarak İndir</button>
+
+            </div>
+        </div>
+        
+        <div id="info">
+            <h3>İstatistikler</h3>
+            <div class="status">Toplam Kutu: <span id="totalBoxes">0</span></div>
+            <div class="status">Düşen Kutu: <span id="fallenBoxes">0</span></div>
+            <div class="status">Başarı Oranı: <span id="successRate">100</span>%</div>
+            <div class="status">Yakalanan Görüntü: <span id="capturedImages">0</span></div>
+        </div>
+        <div id="controls">
+    <hr>
+    <h4>Veri Seti Oluşturma</h4>
+    <button id="startDatasetBtn" class="btn">Otomatik Yakalamayı Başlat</button>
+    <button id="stopDatasetBtn" class="btn" disabled>Durdur & İndir</button>
+</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        class ConveyorSimulator {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+                this.boxes = [];
+                this.isRunning = false;
+                this.lastSpawnTime = 0;
+                this.totalBoxes = 0;
+                this.fallenBoxes = 0;
+                this.capturedData = [];
+                this.capturedImages = 0;
+
+                this.isCapturingDataset = false; // Veri seti yakalama modunda mı?
+                this.datasetZip = null;
+                this.csvData = [];
+                this.fallFolder = null;
+                this.noFallFolder = null;
+                this.lastNoFallCaptureTime = 0;
+                this.captureIntervalId = null; // Periyodik yakalama için
+                
+                this.init();
+                this.setupControls();
+                this.animate();
+            }
+            
+            init() {
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x2c3e50);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                document.getElementById('container').appendChild(this.renderer.domElement);
+                
+                // Kamera pozisyonu - model eğitimi için optimize edilmiş açı
+                this.camera.position.set(8, 4, 0);
+                this.camera.lookAt(0, 1, 0);
+                
+                // Işıklandırma
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                this.scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 10, 5);
+                directionalLight.castShadow = false;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                this.scene.add(directionalLight);
+                
+                // Konveyör bant
+                this.createConveyor();
+                
+                // Zemin
+                this.createFloor();
+            }
+            
+            createConveyor() {
+                const conveyorGeometry = new THREE.BoxGeometry(30, 0.3, 3);
+                const conveyorMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x34495e,
+                    transparent: true,
+                    opacity: 1,
+                });
+                this.conveyor = new THREE.Mesh(conveyorGeometry, conveyorMaterial);
+                this.conveyor.position.y = 1;
+                this.conveyor.receiveShadow = true;
+                this.scene.add(this.conveyor);
+                
+                // Sadece başlangıç ve bitiş noktalarında küçük destekler (kenarlar açık)
+                const supportGeometry = new THREE.BoxGeometry(1, 0.5, 2.1);
+                const supportMaterial = new THREE.MeshLambertMaterial({ color: 0x2c3e50 });
+                const edgeGeometry = new THREE.BoxGeometry(20, 0.1, 0.1);
+                
+                // Başlangıç desteği
+                const startSupport = new THREE.Mesh(supportGeometry, supportMaterial);
+                startSupport.position.set(-9.5, 0.75, 0);
+                this.scene.add(startSupport);
+                
+                // Bitiş desteği
+                /*const endSupport = new THREE.Mesh(supportGeometry, supportMaterial);
+                endSupport.position.set(9.5, 0.75, 0);
+                this.scene.add(endSupport); */
+                
+                // Konveyör motor (görsel detay için)
+                const motorGeometry = new THREE.CylinderGeometry(0.3, 0.3, 2.5);
+                const motorMaterial = new THREE.MeshLambertMaterial({ color: 0x2c3e50 });
+                const motor = new THREE.Mesh(motorGeometry, motorMaterial);
+                motor.position.set(-10, 0.5, 0);
+                motor.rotation.z = Math.PI / 2;
+                this.scene.add(motor);
+            }
+            
+            createFloor() {
+                const floorGeometry = new THREE.PlaneGeometry(40, 40);
+                const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x7f8c8d });
+                this.floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                this.floor.rotation.x = -Math.PI / 2;
+                this.floor.position.y = -2;
+                this.floor.receiveShadow = true;
+                this.scene.add(this.floor);
+            }
+            
+            createBox() {
+                const sizeType = document.getElementById('boxSize').value;
+                let boxSize;
+                
+                switch(sizeType) {
+                    case 'small':
+                        boxSize = {  x: 0.8, y: 0.8, z: 0.8 };
+                        break;
+                    case 'large':
+                        boxSize = { x: 1.8, y: 1.8, z: 1.8 };
+                        break;
+                    case 'random':
+                        const size = 0.4 + Math.random() * 0.8;
+                        boxSize = { x: size, y: size, z: size };
+                        break;
+                    default: // medium
+                        boxSize = { x: 1.2, y: 1.2, z: 1.2 };
+                }
+                
+                const geometry = new THREE.BoxGeometry(boxSize.x, boxSize.y, boxSize.z);
+                const colors = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12, 0x9b59b6];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const material = new THREE.MeshLambertMaterial({ color });
+                
+                const box = new THREE.Mesh(geometry, material);
+                
+                // Kutunun konveyör üzerindeki başlangıç pozisyonu (biraz dengesiz yerleştirme)
+                const initialZ = (Math.random() - 0.5) * 1.3; // Konveyör genişliği dahilinde
+                const stability = Math.random(); // Denge faktörü
+                
+                box.position.set(
+                    -16, 
+                    1.1 + boxSize.y/2, // Konveyörün tam üstünde
+                    initialZ
+                );
+                
+                // Başlangıçta hafif dengesizlik (gerçek durumu simüle etmek için)
+                /*if (stability < 0.3) {
+                    box.rotation.x = (Math.random() - 0.5) * 0.5;
+                    box.rotation.z = (Math.random() - 0.5) * 0.5;
+                }
+                */
+                box.castShadow = true;
+                
+                // Kutu özelliklerini kaydet
+                box.userData = {
+                    size: sizeType,
+                    color: color,
+                    willFall: Math.random() < (parseInt(document.getElementById('fallProbability').value) / 100),
+                    velocity: { x: 0, y: 0, z: 0 },
+                    angularVelocity: { x: 0, y: 0, z: 0 },
+                    onConveyor: true,
+                    spawnTime: Date.now(),
+                    stability: stability,
+                    boxWidth: boxSize.z, // Z ekseni genişliği düşme hesabı için
+                    fallTimer: 0, // Düşme için zamanlayıcı
+                    instabilityAccumulator: 0 // Dengesizlik birikimi
+                };
+                
+                this.scene.add(box);
+                this.boxes.push(box);
+                this.totalBoxes++;
+            }
+            
+            updateBox(box) {
+                const beltSpeed = parseFloat(document.getElementById('beltSpeed').value) * 0.02;
+                const conveyorHalfWidth = 2; // Konveyör genişliği / 2
+                
+                if (box.userData.onConveyor) {
+                    // Konveyör hareket simülasyonu
+                    box.position.x += beltSpeed;
+                    
+                    // Konveyör titreşimi ve dengesizlik simülasyonu
+                    const vibrationLevel = parseFloat(document.getElementById('vibration').value) * 0.001;
+                    if (Math.random() < 0.02) {
+                        // Hafif titreşim ekle
+                        box.userData.velocity.z += (Math.random() - 0.5) * vibrationLevel;
+                        box.userData.angularVelocity.x += (Math.random() - 0.5) * vibrationLevel * 5;
+                    }
+
+                    // Düşme oranını artırmak için yeni kod
+                    if (box.userData.willFall) { if (typeof box.userData.fallTimer === 'undefined') {
+                        box.userData.fallTimer = 0;
+                    }if (typeof box.userData.instabilityAccumulator === 'undefined') {
+                        box.userData.instabilityAccumulator = 0;
+                    }
+                        box.userData.fallTimer++;
+                        if (box.userData.fallTimer > 30) {
+                            if (Math.random() < 0.01) {
+                            box.userData.velocity.z += (Math.random() - 0.5) * 0.08;
+                            box.userData.instabilityAccumulator += 0.02;
+                            }
+                        }
+                    }
+
+                    // Dengesizlik birikimi kontrolü
+                    if (box.userData.instabilityAccumulator && box.userData.instabilityAccumulator > 0.1) {
+                        box.userData.velocity.z += (Math.random() - 0.5) * 0.1;
+                        box.userData.angularVelocity.x += (Math.random() - 0.5) * 0.05;
+                    }       
+                    
+                    // Z pozisyonu güncelleme (yan hareket)
+                    box.position.z += box.userData.velocity.z;
+                    box.userData.velocity.z *= 0.98; // Sürtünme
+                    
+                    // Rotasyon güncelleme
+                    box.rotation.x += box.userData.angularVelocity.x;
+                    box.rotation.z += box.userData.angularVelocity.z;
+                    box.userData.angularVelocity.x *= 0.95;
+                    box.userData.angularVelocity.z *= 0.95;
+                    
+                    // Düşme kontrolü - kutunun kenardan aştığını kontrol et
+                    const boxEdge = Math.abs(box.position.z) + (box.userData.boxWidth / 2);
+                    
+                    
+                    const boxHalfWidth = box.userData.boxWidth / 2;
+                    const boxEdgePosition = Math.abs(box.position.z) + boxHalfWidth;
+
+                    
+                    if (boxEdgePosition > conveyorHalfWidth && box.userData.onConveyor) {
+                        // Kutu konveyör kenarından aştı - düş!
+                        box.userData.onConveyor = false;
+                        box.userData.velocity.y = 0; // Başlangıç Y hızı
+                        box.userData.velocity.x = beltSpeed * 0.7; // İleriye doğru momentum
+                        box.userData.fallTimestamp = Date.now();
+                        
+                        if (this.isCapturingDataset) {
+                            box.userData.captureFallFrames = 3; // Düşerken 3 kare yakala
+                            }
+
+                  
+
+                        // Düşme yönünü belirle
+                        if (box.position.z > 0) {
+                            box.userData.velocity.z = Math.max(0.02, Math.abs(box.userData.velocity.z));
+                        } else {
+                            box.userData.velocity.z = Math.min(-0.02, -Math.abs(box.userData.velocity.z));
+                        }
+                        
+                        // Dönerken düşme
+                        box.userData.angularVelocity.x = (Math.random() - 0.5) * 0.1;
+                        box.userData.angularVelocity.z = (Math.random() - 0.5) * 0.1;
+                        
+                        this.fallenBoxes++;
+                    }
+                    
+                    // Ek düşme faktörleri
+                    const currentFallProbability = parseInt(document.getElementById('fallProbability').value);
+                    const dynamicFallChance = 0.001 + (currentFallProbability / 100) * 0.005;
+
+                        if (box.userData.willFall && Math.random() < dynamicFallChance) {
+                         // Dengesizlik nedeniyle ani düşme
+                         box.userData.velocity.z += (Math.random() - 0.5) * 0.08;
+                     box.userData.angularVelocity.x += (Math.random() - 0.5) * 0.03;
+}
+                    
+                } else {
+                    // Düşen kutu fiziği
+                    box.userData.velocity.y -= 0.004; // Yerçekimi
+                    
+                    // Pozisyon güncelleme
+                    box.position.x += box.userData.velocity.x;
+                    box.position.y += box.userData.velocity.y;
+                    box.position.z += box.userData.velocity.z;
+                    
+                    // Rotasyon güncelleme
+                    box.rotation.x += box.userData.angularVelocity.x;
+                    box.rotation.y += box.userData.angularVelocity.y;
+                    box.rotation.z += box.userData.angularVelocity.z;
+                    
+                    // Zemine çarpma
+                    if (box.position.y <= -1.4) {
+                        box.position.y = -1.4;
+                        box.userData.velocity.y *= -0.4; // Zıplama
+                        box.userData.velocity.x *= 0.9; // Sürtünme
+                        box.userData.velocity.z *= 0.9; // Sürtünme
+                        
+                        // Angular velocity'yi azalt
+                        box.userData.angularVelocity.x *= 0.8;
+                        box.userData.angularVelocity.y *= 0.8;
+                        box.userData.angularVelocity.z *= 0.8;
+                        
+                        // Durma kontrolü
+                        if (Math.abs(box.userData.velocity.y) < 0.01) {
+                            box.userData.velocity.y = 0;
+                        }
+                    }
+                    
+                    // Hava sürtünmesi
+                    box.userData.velocity.x *= 0.995;
+                    box.userData.velocity.z *= 0.995;
+                }
+                
+                // Kutuları temizle
+                if (box.position.x > 12 || box.position.y < -2|| (!box.userData.onConveyor && (Date.now() - box.userData.spawnTime > 8000))) {
+                    // 8 saniye sonra düşen kutuları temizle
+                    this.scene.remove(box);
+                    const index = this.boxes.indexOf(box);
+                    if (index > -1) {
+                        this.boxes.splice(index, 1);
+    }
+}
+            }
+            // GÖRÜNTÜ YAKALAMA FONKSİYONU
+            captureFrame() {
+                try {
+                    console.log('Görüntü yakalama başladı...');
+                    
+                    // Canvas'tan görüntü verisi al
+                    const canvas = this.renderer.domElement;
+                    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+                    
+                    // Frame verisi oluştur
+                    const frameData = {
+                        id: this.capturedImages + 1,
+                        timestamp: Date.now(),
+                        date: new Date().toLocaleString('tr-TR'),
+                        image: imageData,
+                        metadata: {
+                            beltSpeed: parseFloat(document.getElementById('beltSpeed').value),
+                            totalBoxes: this.totalBoxes,
+                            fallenBoxes: this.fallenBoxes,
+                            successRate: ((this.totalBoxes - this.fallenBoxes) / Math.max(this.totalBoxes, 1) * 100).toFixed(1)
+                        },
+                        boxes: this.boxes.map(box => ({
+                            position: {
+                                x: parseFloat(box.position.x.toFixed(3)),
+                                y: parseFloat(box.position.y.toFixed(3)),
+                                z: parseFloat(box.position.z.toFixed(3))
+                            },
+                            size: box.userData.size,
+                            color: `#${box.material.color.getHexString()}`,
+                            onConveyor: box.userData.onConveyor,
+                            willFall: box.userData.willFall,
+                            isFalling: !box.userData.onConveyor
+                        }))
+                    };
+                    
+                    this.capturedData.push(frameData);
+                    this.capturedImages++;
+                    
+                    // UI güncelle
+                    document.getElementById('capturedImages').textContent = this.capturedImages;
+                    document.getElementById('lastCapture').textContent = new Date().toLocaleTimeString('tr-TR');
+                    
+                    console.log(`Görüntü yakalandı! Toplam: ${this.capturedImages}`);
+                    
+                    // Başarı bildirimi
+                    this.showNotification('Görüntü başarıyla yakalandı!', 'success');
+                    
+                } catch (error) {
+                    console.error('Görüntü yakalama hatası:', error);
+                    this.showNotification('Görüntü yakalanırken hata oluştu!', 'error');
+                }
+            }
+            
+            // TEK TEK GÖRSEL İNDİRME
+            downloadImages() {
+                if (this.capturedData.length === 0) {
+                    this.showNotification('Henüz yakalanmış görüntü yok!', 'warning');
+                    return;
+                }
+                
+                console.log(`${this.capturedData.length} görsel indiriliyor...`);
+                
+                this.capturedData.forEach((frameData, index) => {
+                    setTimeout(() => {
+                        const link = document.createElement('a');
+                        link.href = frameData.image;
+                        link.download = `frame_${String(frameData.id).padStart(4, '0')}_${frameData.timestamp}.jpg`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }, index * 100); // Her indirme arasında 100ms bekle
+                });
+                
+                this.showNotification(`${this.capturedData.length} görsel indiriliyor...`, 'success');
+            }
+            
+            // ZIP OLARAK İNDİRME
+            async downloadAsZip() {
+                if (this.capturedData.length === 0) {
+                    this.showNotification('Henüz yakalanmış görüntü yok!', 'warning');
+                    return;
+                }
+                
+                try {
+                    console.log('ZIP dosyası oluşturuluyor...');
+                    const zip = new JSZip();
+                    
+                    // Klasörler oluştur
+                    const imagesFolder = zip.folder('images');
+                    const annotationsFolder = zip.folder('annotations');
+                    
+                    // Her frame için dosya ekle
+                    this.capturedData.forEach((frameData) => {
+                        const fileName = `frame_${String(frameData.id).padStart(4, '0')}_${frameData.timestamp}`;
+                        
+                        // Görsel ekle
+                        const base64Data = frameData.image.split(',')[1];
+                        imagesFolder.file(`${fileName}.jpg`, base64Data, {base64: true});
+                        
+                        // Metadata JSON ekle
+                        const metadata = {
+                            id: frameData.id,
+                            timestamp: frameData.timestamp,
+                            date: frameData.date,
+                            metadata: frameData.metadata,
+                            boxes: frameData.boxes
+                        };
+                        annotationsFolder.file(`${fileName}.json`, JSON.stringify(metadata, null, 2));
+                    });
+                    
+                    // Dataset bilgisi ekle
+                    const datasetInfo = {
+                        name: 'Konveyör Bandı Simülasyon Dataset',
+                        version: '1.0',
+                        created: new Date().toISOString(),
+                        totalFrames: this.capturedData.length,
+                        description: 'Konveyör bandı üzerindeki kutuların simülasyon verileri',
+                        classes: ['box_on_conveyor', 'box_falling', 'box_fallen'],
+                        statistics: {
+                            totalBoxes: this.totalBoxes,
+                            fallenBoxes: this.fallenBoxes,
+                            successRate: ((this.totalBoxes - this.fallenBoxes) / Math.max(this.totalBoxes, 1) * 100).toFixed(1) + '%'
+                        }
+                    };
+                    
+                    zip.file('dataset_info.json', JSON.stringify(datasetInfo, null, 2));
+                    zip.file('README.txt', 'Konveyör Bandı Simülasyon Dataset\n\nimages/ - Yakalanan görüntüler\nannotations/ - Her görüntü için metadata\ndataset_info.json - Dataset hakkında genel bilgiler');
+                    
+                    // ZIP dosyasını oluştur ve indir
+                    const content = await zip.generateAsync({type: 'blob'});
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = `conveyor_dataset_${Date.now()}.zip`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    this.showNotification('ZIP dosyası başarıyla indirildi!', 'success');
+                    
+                } catch (error) {
+                    console.error('ZIP oluşturma hatası:', error);
+                    this.showNotification('ZIP dosyası oluşturulurken hata!', 'error');
+                }
+            }
+            captureFrame() {
+                const imageData = this.renderer.domElement.toDataURL('image/jpeg', 0.8);
+                
+                // Mevcut durum bilgilerini kaydet
+                const frameData = {
+                    timestamp: Date.now(),
+                    image: imageData,
+                    boxes: this.boxes.map(box => ({
+                        position: {
+                            x: box.position.x,
+                            y: box.position.y,
+                            z: box.position.z
+                        },
+                        size: box.userData.size,
+                        color: box.userData.color,
+                        onConveyor: box.userData.onConveyor,
+                        willFall: box.userData.willFall,
+                        isFalling: !box.userData.onConveyor
+                    })),
+                    beltSpeed: parseFloat(document.getElementById('beltSpeed').value),
+                    totalBoxes: this.totalBoxes,
+                    fallenBoxes: this.fallenBoxes
+                };
+                
+                this.capturedData.push(frameData);
+                this.capturedImages++;
+                document.getElementById('capturedImages').textContent = this.capturedImages;
+            }
+            
+            downloadDataset() {
+                const dataset = {
+                    metadata: {
+                        totalFrames: this.capturedData.length,
+                        totalBoxes: this.totalBoxes,
+                        fallenBoxes: this.fallenBoxes,
+                        generatedAt: new Date().toISOString()
+                    },
+                    frames: this.capturedData
+                };
+                
+                const dataStr = JSON.stringify(dataset, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `conveyor_dataset_${Date.now()}.json`;
+                link.click();
+            }
+            
+            setupControls() {
+                // Slider güncellemeleri
+                document.getElementById('beltSpeed').addEventListener('input', (e) => {
+                    document.getElementById('speedValue').textContent = e.target.value;
+                });
+                
+                document.getElementById('fallProbability').addEventListener('input', (e) => {
+                    document.getElementById('fallValue').textContent = e.target.value;
+                });
+                
+                document.getElementById('spawnRate').addEventListener('input', (e) => {
+                    document.getElementById('spawnValue').textContent = e.target.value;
+                });
+                
+                document.getElementById('vibration').addEventListener('input', (e) => {
+                    document.getElementById('vibrationValue').textContent = e.target.value;
+                });
+                
+                // Buton kontrolleri
+                document.getElementById('startBtn').addEventListener('click', () => {
+                    this.isRunning = true;
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                });
+                
+                document.getElementById('stopBtn').addEventListener('click', () => {
+                    this.isRunning = false;
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                });
+                
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.reset();
+                });
+                
+                document.getElementById('captureBtn').addEventListener('click', () => {
+                    this.captureFrame();
+                });
+                
+                document.getElementById('downloadBtn').addEventListener('click', () => {
+                    this.downloadDataset();
+                });
+                
+                // Kamera açısı değişimi
+                document.getElementById('cameraAngle').addEventListener('change', (e) => {
+                    this.setCameraAngle(e.target.value);
+                });
+                // setupControls fonksiyonunun içine ekleyin
+document.getElementById('startDatasetBtn').addEventListener('click', () => {
+    this.startDatasetGeneration();
+});
+
+document.getElementById('stopDatasetBtn').addEventListener('click', () => {
+    this.stopAndDownloadDataset();
+});
+            }
+            
+            setCameraAngle(angle) {
+                switch(angle) {
+                    case 'top':
+                        this.camera.position.set(0, 12, 0);
+                        this.camera.lookAt(0, 1, 0);
+                        break;
+                    case 'front':
+                        this.camera.position.set(0, 2, 6);
+                        this.camera.lookAt(0, 1, 0);
+                        break;
+                    case 'diagonal':
+                        this.camera.position.set(-6, 5, 6);
+                        this.camera.lookAt(2, 1, 0);
+                        break;
+                    default: // side - Model eğitimi için en iyi açı
+                        this.camera.position.set(8, 4, 0);
+                        this.camera.lookAt(0, 1, 0);
+                }
+            }
+            
+            reset() {
+                this.boxes.forEach(box => this.scene.remove(box));
+                this.boxes = [];
+                this.totalBoxes = 0;
+                this.fallenBoxes = 0;
+                this.capturedData = [];
+                this.capturedImages = 0;
+                this.isRunning = false;
+                
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                
+                this.updateStats();
+            }
+            /**
+             * Verilen bir 3D kutu nesnesinin ekrandaki 2D sınırlayıcı kutusunu (bounding box) hesaplar.
+             * @param {THREE.Mesh} box - 3D kutu nesnesi.
+             * @returns {object|null} {x, y, width, height} formatında bir nesne veya kutu ekran dışındaysa null.
+             */
+            getBoundingBox(box) {
+                const canvas = this.renderer.domElement;
+                box.geometry.computeBoundingBox();
+                const box3 = box.geometry.boundingBox.clone();
+                box3.applyMatrix4(box.matrixWorld);
+
+                const vertices = [
+                    new THREE.Vector3(box3.min.x, box3.min.y, box3.min.z),
+                    new THREE.Vector3(box3.min.x, box3.min.y, box3.max.z),
+                    new THREE.Vector3(box3.min.x, box3.max.y, box3.min.z),
+                    new THREE.Vector3(box3.min.x, box3.max.y, box3.max.z),
+                    new THREE.Vector3(box3.max.x, box3.min.y, box3.min.z),
+                    new THREE.Vector3(box3.max.x, box3.min.y, box3.max.z),
+                    new THREE.Vector3(box3.max.x, box3.max.y, box3.min.z),
+                    new THREE.Vector3(box3.max.x, box3.max.y, box3.max.z),
+                ];
+
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                let isVisible = false;
+
+                vertices.forEach(v => {
+                    const projected = v.project(this.camera);
+                    // Z değeri 1'den büyükse, kamera arkasındadır
+                    if (projected.z > 1) return;
+
+                    isVisible = true;
+                    const x = (projected.x * 0.5 + 0.5) * canvas.width;
+                    const y = (projected.y * -0.5 + 0.5) * canvas.height;
+                    
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
+                });
+
+                if (!isVisible) return null;
+
+                return {
+                    x: Math.round(minX),
+                    y: Math.round(minY),
+                    width: Math.round(maxX - minX),
+                    height: Math.round(maxY - minY)
+                };
+            }
+
+            /**
+             * Veri seti oluşturma sürecini başlatır.
+             * @param {number} noFallInterval - "no_fall" durumları için periyodik yakalama aralığı (ms).
+             */
+            startDatasetGeneration(noFallInterval = 2000) {
+                if (!this.isRunning) {
+                    alert("Lütfen önce simülasyonu başlatın!");
+                    return;
+                }
+                this.isCapturingDataset = true;
+                this.datasetZip = new JSZip();
+                this.fallFolder = this.datasetZip.folder("fall");
+                this.noFallFolder = this.datasetZip.folder("no_fall");
+                this.csvData = [["image_name", "label", "x_min", "y_min", "x_max", "y_max"]];
+                
+                // "no_fall" durumları için periyodik yakalamayı ayarla
+                this.captureIntervalId = setInterval(() => {
+                    // Sahnede düşen kutu yoksa ve yakalama modu aktifse
+                    if (this.isCapturingDataset && this.boxes.every(b => b.userData.onConveyor)) {
+                       this._captureAndStoreFrame('no_fall');
+                    }
+                }, noFallInterval);
+
+                console.log("Veri seti oluşturma başlatıldı.");
+                // Butonları ayarla
+                document.getElementById('startDatasetBtn').disabled = true;
+                document.getElementById('stopDatasetBtn').disabled = false;
+            }
+            
+
+            /**
+             * Geçerli sahne durumunu yakalar, etiketler ve ZIP/CSV'ye kaydeder.
+             * @param {string} label - 'fall' veya 'no_fall'.
+             * @param {THREE.Mesh} [targetBox=null] - Bounding box'ı çizilecek hedef kutu (genellikle düşen kutu).
+             */
+            _captureAndStoreFrame(label, targetBox = null) {
+                const imageData = this.renderer.domElement.toDataURL('image/png');
+                const base64Data = imageData.split(',')[1];
+                const timestamp = Date.now();
+                const fileName = `${label}_${timestamp}.png`;
+                
+                const targetFolder = label === 'fall' ? this.fallFolder : this.noFallFolder;
+                targetFolder.file(fileName, base64Data, { base64: true });
+
+                let bbox = null;
+                if (label === 'fall' && targetBox) {
+                    bbox = this.getBoundingBox(targetBox);
+                }
+                
+                if (bbox) {
+                    this.csvData.push([fileName, label, bbox.x, bbox.y, bbox.x + bbox.width, bbox.y + bbox.height]);
+                } else {
+                    this.csvData.push([fileName, label, "", "", "", ""]);
+                }
+                console.log(`Yakalandı: ${fileName}`);
+            }
+
+            /**
+             * Veri seti oluşturmayı durdurur, CSV dosyasını oluşturur ve her şeyi bir ZIP olarak indirir.
+             */
+            async stopAndDownloadDataset() {
+                this.isCapturingDataset = false;
+                if(this.captureIntervalId) {
+                    clearInterval(this.captureIntervalId);
+                    this.captureIntervalId = null;
+                }
+
+                // CSV verisini string'e çevir
+                const csvContent = this.csvData.map(e => e.join(",")).join("\n");
+                this.datasetZip.file("annotations.csv", csvContent);
+
+                // ZIP dosyasını oluştur ve indir
+                const content = await this.datasetZip.generateAsync({ type: "blob" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(content);
+                link.download = `conveyor_dataset_${Date.now()}.zip`;
+                link.click();
+
+                console.log("Veri seti oluşturma tamamlandı ve ZIP indirildi.");
+                 // Butonları sıfırla
+                document.getElementById('startDatasetBtn').disabled = false;
+                document.getElementById('stopDatasetBtn').disabled = true;
+            }
+
+            updateStats() {
+                document.getElementById('totalBoxes').textContent = this.totalBoxes;
+                document.getElementById('fallenBoxes').textContent = this.fallenBoxes;
+                const successRate = this.totalBoxes > 0 ? 
+                    Math.round(((this.totalBoxes - this.fallenBoxes) / this.totalBoxes) * 100) : 100;
+                document.getElementById('successRate').textContent = successRate;
+                document.getElementById('capturedImages').textContent = this.capturedImages;
+            }
+            
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                if (this.isRunning) {
+                    const now = Date.now();
+                    const spawnInterval = parseFloat(document.getElementById('spawnRate').value) * 1000;
+                    
+                    if (now - this.lastSpawnTime > spawnInterval) {
+                        this.createBox();
+                        this.lastSpawnTime = now;
+                    }
+                    
+                    // Otomatik yakalama (her 500ms'de bir)
+                    if (Math.random() < 0.01 && this.boxes.length > 0) {
+                        this.captureFrame();
+                    }
+                }
+
+                if (this.isCapturingDataset) {
+        this.boxes.forEach(box => {
+            // Düşme anı için ardışık çekim
+            if (box.userData.captureFallFrames && box.userData.captureFallFrames > 0) {
+                this._captureAndStoreFrame('fall', box);
+                box.userData.captureFallFrames--;
+            }
+        });
+    }
+                this.boxes.forEach(box => this.updateBox(box));
+                this.updateStats();
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+        
+        // Pencere yeniden boyutlandırma
+        window.addEventListener('resize', () => {
+            simulator.camera.aspect = window.innerWidth / window.innerHeight;
+            simulator.camera.updateProjectionMatrix();
+            simulator.renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Simülatörü başlat
+        const simulator = new ConveyorSimulator();
+    </script>
+</body>
+</html>

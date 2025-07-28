@@ -1,0 +1,99 @@
+
+        <!DOCTYPE html>
+        <html lang="tr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>YOLOv8 Düşme Tespiti - Analiz Raporu</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+                .header { text-align: center; background: #f4f4f4; padding: 20px; border-radius: 10px; }
+                .section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+                .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+                .metric-card { background: #f9f9f9; padding: 15px; border-radius: 5px; text-align: center; }
+                .metric-value { font-size: 24px; font-weight: bold; color: #2c3e50; }
+                .image-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+                .image-item { text-align: center; }
+                .image-item img { max-width: 100%; height: auto; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+                .conclusion { background: #e8f5e8; padding: 20px; border-radius: 10px; border-left: 5px solid #4CAF50; }
+                .confusion-info { background: #fff3cd; padding: 15px; border-radius: 5px; margin: 10px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>🤖 YOLOv8 Konveyör Bandı Düşme Tespiti</h1>
+                <h2>Analiz ve Performans Raporu</h2>
+                <p><strong>Tarih:</strong> 28.07.2025 01:55</p>
+                <p><strong>Model:</strong> YOLOv8 Nano (4GB RAM Optimized)</p>
+            </div>
+            
+            <div class="section">
+                <h3>📊 Veri Seti Analizi</h3>
+                <div class="image-grid">
+                    <div class="image-item">
+                        <img src="dataset_analysis.png" alt="Dataset Analizi">
+                        <p><strong>Veri Seti Dağılımı ve İstatistikleri</strong></p>
+                    </div>
+                    <div class="image-item">
+                        <img src="sample_images.png" alt="Örnek Görüntüler">
+                        <p><strong>Veri Seti Örnekleri</strong></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>📈 Eğitim Süreci</h3>
+                <div class="image-grid">
+                    <div class="image-item">
+                        <img src="training_curves.png" alt="Eğitim Eğrileri">
+                        <p><strong>Loss ve Metrik Eğrileri</strong></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>🎯 Model Performansı</h3>
+                <div class="image-grid">
+                    <div class="image-item">
+                        <img src="performance_report.png" alt="Performans Raporu">
+                        <p><strong>Test Metrikleri</strong></p>
+                    </div>
+                    <div class="image-item">
+                        <img src="prediction_showcase.png" alt="Tahmin Örnekleri">
+                        <p><strong>Model Tahminleri</strong></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>🔄 Konfüzyon Matrisi Analizi</h3>
+                <div class="confusion-info">
+                    <h4>Konfüzyon Matrisi Açıklaması:</h4>
+                    <ul>
+                        <li><strong>True Positive (TP):</strong> Düşme varken doğru tespit edildi</li>
+                        <li><strong>True Negative (TN):</strong> Düşme yokken doğru tespit edildi</li>
+                        <li><strong>False Positive (FP):</strong> Düşme yokken yanlış alarm verdi</li>
+                        <li><strong>False Negative (FN):</strong> Düşme varken tespit edemedi</li>
+                    </ul>
+                </div>
+                <div class="image-grid">
+                    <div class="image-item">
+                        <img src="confusion_matrix.png" alt="Konfüzyon Matrisi">
+                        <p><strong>Binary Sınıflandırma Matrisi (fall vs no_fall)</strong></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section conclusion">
+                <h3>🎉 Sonuç ve Öneriler</h3>
+                <ul>
+                    <li><strong>Model Başarısı:</strong> YOLOv8n modeli düşme tespiti görevinde başarılı performans gösterdi</li>
+                    <li><strong>4GB RAM Optimizasyonu:</strong> Düşük kaynak kullanımı ile etkili eğitim gerçekleştirildi</li>
+                    <li><strong>Real-time Kullanım:</strong> Model gerçek zamanlı konveyör bandı izleme için uygun</li>
+                    <li><strong>Konfüzyon Matrisi:</strong> Binary sınıflandırma performansı detaylı analiz edildi</li>
+                    <li><strong>İyileştirme Önerileri:</strong> Daha fazla veri ile model performansı artırılabilir</li>
+                </ul>
+            </div>
+        </body>
+        </html>
+        
